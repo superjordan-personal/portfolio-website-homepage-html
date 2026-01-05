@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume - Jordan Strauss</title>
+    <style>
+        /* --- SHARED STYLES (MATCHING INDEX.HTML) --- */
+        :root {
+            --bg-primary: #000000;
+            --bg-secondary: #0d0d0d;
+            --bg-card: #1a1a1a;
+            --text-primary: #f5f5f7;
+            --text-secondary: #86868b;
+            --text-tertiary: #6e6e73;
+            --accent-blue: #0071e3;
+            --accent-light: #06c;
+            --border-subtle: #2d2d2d;
+            --shadow-primary: rgba(0, 0, 0, 0.6);
+            --shadow-card: rgba(0, 0, 0, 0.3);
+            --banner-height: 36px;
+            --cursor-x: 50vw;
+            --cursor-y: 50vh;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        @font-face {
+            font-family: 'SF Pro Display';
+            src: url('data:font/woff2;base64,') format('woff2');
+            font-display: swap;
+        }
+
+        body {
+            font-family: 'Consolas', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.47059;
+            letter-spacing: -0.022em;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+        }
+
+        /* --- LOADING SCREEN --- */
+        #loading-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-primary); z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.8s ease-out, visibility 0.8s;
+        }
+        #loading-screen.hidden { opacity: 0; visibility: hidden; }
+        .loading-text {
+            font-size: 48px; font-weight: 700; color: var(--accent-blue);
+            margin-bottom: 20px; letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 113, 227, 0.5);
+            text-transform: lowercase; /* match index.html */
+        }
+        .progress-bar-container {
+            width: 200px; height: 4px; background: var(--border-subtle);
+            border-radius: 4px; overflow: hidden;
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.2);
+        }
+        .progress-bar {
+            height: 100%; width: 0%; background: #39ff14;
+            box-shadow: 0 0 20px #39ff14, 0 0 10px #39ff14, 0 0 5px #39ff14;
+            animation: progressAnimation 3.5s linear forwards;
+        }
+        @keyframes progressAnimation { to { width: 100%; } }
+
+        /* Main Content Transition Wrapper */
+        .main-content-wrapper {
+            opacity: 0; transform: translateY(20px);
+            transition: opacity 1s ease-out 0.3s, transform 1s ease-out 0.3s;
+            padding-top: var(--banner-height);
+        }
+        body.loaded .main-content-wrapper { opacity: 1; transform: translateY(0); }
+        body.loading { overflow: hidden; }
+
+        .container {
+            max-width: 980px; margin: 0 auto; padding: 0 22px;
+            position: relative; z-index: 10;
+        }
+
+        /* --- BANNER --- */
+        .top-banner {
+            position: fixed; top: 0; left: 0; width: 100%; height: var(--banner-height);
+            background-color: var(--accent-blue); color: white; z-index: 2000;
+            overflow: hidden; display: flex; align-items: center;
+        }
+        .banner-track { display: flex; width: max-content; animation: scrollBanner 30s linear infinite; }
+        .banner-set { display: flex; }
+        .banner-text { padding: 0 40px; font-size: 13px; font-weight: 600; letter-spacing: 0.02em; white-space: nowrap; }
+        @keyframes scrollBanner { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        .top-banner:hover .banner-track { animation-play-state: paused; }
+
+        /* --- BACKGROUND & CURSOR --- */
+        .hero-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+            background: radial-gradient(ellipse at center, rgba(0, 113, 227, 0.15) 0%, rgba(0, 113, 227, 0.05) 50%, transparent 100%);
+            z-index: -2; animation: subtleShift 20s ease-in-out infinite;
+        }
+        .cursor-glow {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1; pointer-events: none;
+            background: radial-gradient(600px circle at var(--cursor-x) var(--cursor-y), rgba(0, 113, 227, 0.18), transparent 45%);
+            mix-blend-mode: screen;
+        }
+        .static-stars-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -2; pointer-events: none; transition: transform 0.1s linear; 
+        }
+        .static-star {
+            position: absolute; background: white; border-radius: 50%; opacity: 0;
+            animation: twinkle var(--duration, 3s) ease-in-out infinite; animation-delay: var(--delay, 0s);
+        }
+        @keyframes twinkle { 0%, 100% { opacity: 0.2; transform: scale(0.8); } 50% { opacity: 0.9; transform: scale(1.2); } }
+        
+        .night {
+            position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
+            transform: rotateZ(45deg); z-index: -1; pointer-events: none;
+        }
+        .shooting_star {
+            position: absolute; left: 50%; top: 50%; height: 2px;
+            background: linear-gradient(-45deg, rgba(95, 145, 255, 1), rgba(0, 0, 255, 0));
+            border-radius: 999px; filter: drop-shadow(0 0 6px rgba(105, 155, 255, 1));
+            animation: tail 3000ms ease-in-out infinite, shooting 3000ms ease-in-out infinite;
+        }
+        .shooting_star::before, .shooting_star::after {
+            content: ''; position: absolute; top: calc(50% - 1px); right: 0; height: 2px;
+            background: linear-gradient(-45deg, rgba(0, 0, 255, 0), rgba(95, 145, 255, 1), rgba(0, 0, 255, 0));
+            transform: translateX(50%) rotateZ(45deg); border-radius: 100%;
+            animation: shining 3000ms ease-in-out infinite;
+        }
+        /* Shooting star positions */
+        .shooting_star:nth-child(1) { top: 0%; left: 20%; animation-delay: 0s; }
+        .shooting_star:nth-child(2) { top: 0%; left: 80%; animation-delay: 1.2s; opacity: 0.5; }
+        .shooting_star:nth-child(3) { top: 20%; left: 100%; animation-delay: 2.4s; }
+        .shooting_star:nth-child(4) { top: 0%; left: 50%; animation-delay: 3.6s; opacity: 0.6; }
+        .shooting_star:nth-child(5) { top: 50%; left: 0%; animation-delay: 4.8s; }
+        
+        @keyframes tail { 0% { width: 0; } 30% { width: 100px; } 100% { width: 0; } }
+        @keyframes shooting { 0% { transform: translateX(0); } 100% { transform: translateX(300px); } }
+        @keyframes shining { 0% { width: 0; } 50% { width: 30px; } 100% { width: 0; } }
+
+        /* Navigation */
+        .nav {
+            position: fixed; top: var(--banner-height); left: 0; right: 0; height: 44px;
+            background: rgba(0, 0, 0, 0.8); backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 0.5px solid var(--border-subtle); z-index: 1000;
+            transition: all 0.3s cubic-bezier(0.28, 0.11, 0.32, 1);
+        }
+        .nav-content {
+            display: flex; align-items: center; justify-content: space-between;
+            height: 100%; max-width: 1024px; margin: 0 auto; padding: 0 22px;
+        }
+        .nav-logo {
+            font-size: 17px; font-weight: 600; color: var(--text-primary);
+            text-decoration: none; letter-spacing: -0.022em; transition: opacity 0.3s ease;
+        }
+        .nav-logo:hover { opacity: 0.8; }
+        .nav-links { display: flex; list-style: none; gap: 44px; }
+        .nav-links a {
+            color: var(--text-secondary); text-decoration: none; font-size: 14px;
+            font-weight: 400; letter-spacing: -0.016em; transition: color 0.3s ease; position: relative;
+        }
+        .nav-links a:hover, .nav-links a.active { color: var(--text-primary); }
+
+        /* --- PDF VIEWER SPECIFICS --- */
+        .resume-section { padding: 120px 0 60px; text-align: center; }
+        .resume-headline { font-size: 48px; font-weight: 600; color: var(--text-primary); margin-bottom: 20px; }
+        .resume-description {
+            font-size: 19px; color: var(--text-secondary); margin-bottom: 40px; 
+            max-width: 800px; margin-left: auto; margin-right: auto; line-height: 1.6;
+            letter-spacing: -0.016em;
+        }
+        .pdf-container {
+            width: 100%; height: 100vh; min-height: 800px;
+            background: var(--bg-card); border-radius: 18px;
+            border: 0.5px solid var(--border-subtle);
+            overflow: hidden; box-shadow: 0 20px 40px var(--shadow-card);
+        }
+        
+        .footer { text-align: center; padding: 40px 0 60px; color: var(--text-tertiary); font-size: 15px; border-top: 0.5px solid var(--border-subtle); margin-top: 60px; }
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; min-width: 28px;
+            padding: 12px 24px; border-radius: 980px; font-size: 17px;
+            font-weight: 400; text-decoration: none; cursor: pointer; border: none; outline: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.6, 1);
+        }
+        .btn-primary { background: var(--accent-blue); color: white; }
+        .btn-primary:hover { background: var(--accent-light); box-shadow: 0 10px 20px rgba(0, 113, 227, 0.3); }
+
+        @media (max-width: 834px) {
+            .nav-links { display: none; }
+            .resume-headline { font-size: 32px; }
+            .pdf-container { height: 600px; }
+        }
+    </style>
+</head>
+<body class="loading">
+
+    <div id="loading-screen">
+        <div class="loading-text">js</div>
+        <div class="progress-bar-container">
+            <div class="progress-bar"></div>
+        </div>
+    </div>
+
+    <div class="main-content-wrapper">
+        <div class="top-banner">
+            <div class="banner-track">
+                <div class="banner-set">
+                    <span class="banner-text">Currently making big computers move faster at ASI ★</span>
+                    <span class="banner-text">Currently making big computers move faster at ASI ★</span>
+                    <span class="banner-text">Currently making big computers move faster at ASI ★</span>
+                    <span class="banner-text">Currently making big computers move faster at ASI ★</span>
+                    <span class="banner-text">Currently making big computers move faster at ASI ★</span>
+                </div>
+                <div class="banner-set">
+                    <span class="banner-text">Currently making big computers move faster at ASI ★</span>
+                    <span class="banner-text">Currently making big computers move faster at ASI ★</span>
+                    <span class="banner-text">Currently making big computers move faster at ASI ★</span>
+                    <span class="banner-text">Currently making big computers move faster at ASI ★</span>
+                    <span class="banner-text">Currently making big computers move faster at ASI ★</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="cursor-glow"></div>
+        <div class="hero-bg"></div>
+        <div class="static-stars-container" id="staticStars"></div>
+
+        <div class="night">
+            <div class="shooting_star"></div>
+            <div class="shooting_star"></div>
+            <div class="shooting_star"></div>
+            <div class="shooting_star"></div>
+            <div class="shooting_star"></div>
+            <div class="shooting_star"></div>
+        </div>
+
+        <nav class="nav">
+            <div class="nav-content">
+                <a href="index.html" class="nav-logo">JS</a>
+                <ul class="nav-links">
+                    <li><a href="index.html#about">About</a></li>
+                    <li><a href="index.html#current-role">Current Role</a></li>
+                    <li><a href="index.html#experience">Experience</a></li>
+                    <li><a href="index.html#skills">Skills</a></li>
+                    <li><a href="index.html#education">Education</a></li>
+                    <li><a href="resume.html" class="active">Resume</a></li>
+                    <li><a href="index.html#contact">Contact</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <section class="resume-section">
+            <div class="container">
+                <h1 class="resume-headline">Resume</h1>
+                <p class="resume-description">
+                    If you have any questions, or want any clarity on anything I've worked on, feel free to reach out. I love telling stories, and it takes a lot of love and persistance to ship some of these projects - the teams I've worked with deserve all of the recognition I can give. :)
+                </p>
+                
+                <div class="pdf-container">
+                    <embed src="resume.pdf" type="application/pdf" width="100%" height="100%">
+                </div>
+                
+                <div style="margin-top: 30px;">
+                    <a href="resume.pdf" download class="btn btn-primary">Download PDF</a>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="container">
+                <p>© 2026 Jordan Strauss. Designed with precision and purpose.</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // --- LOADING SCREEN LOGIC ---
+        document.addEventListener("DOMContentLoaded", () => {
+            const loader = document.getElementById('loading-screen');
+            setTimeout(() => {
+                loader.classList.add('hidden');
+                document.body.classList.remove('loading');
+                document.body.classList.add('loaded');
+                setTimeout(() => { loader.style.display = 'none'; }, 800);
+            }, 3500);
+        });
+
+        // --- DYNAMIC BACKGROUND & STARS LOGIC ---
+        const starsContainer = document.getElementById('staticStars');
+        const starCount = 150; 
+
+        for (let i = 0; i < starCount; i++) {
+            const star = document.createElement('div');
+            star.classList.add('static-star');
+            const x = Math.random() * 100;
+            const y = Math.random() * 100;
+            const size = Math.random() < 0.8 ? Math.random() * 2 + 1 : Math.random() * 3 + 2;
+            const duration = Math.random() * 3 + 2; 
+            const delay = Math.random() * 5;
+            star.style.left = `${x}%`; star.style.top = `${y}%`;
+            star.style.width = `${size}px`; star.style.height = `${size}px`;
+            star.style.setProperty('--duration', `${duration}s`);
+            star.style.setProperty('--delay', `${delay}s`);
+            starsContainer.appendChild(star);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            const x = e.clientX; const y = e.clientY;
+            document.documentElement.style.setProperty('--cursor-x', `${x}px`);
+            document.documentElement.style.setProperty('--cursor-y', `${y}px`);
+            const moveX = (window.innerWidth / 2 - x) * 0.02;
+            const moveY = (window.innerHeight / 2 - y) * 0.02;
+            starsContainer.style.transform = `translate(${moveX}px, ${moveY}px)`;
+        });
+
+        // Navigation background on scroll
+        const nav = document.querySelector('.nav');
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            if (scrollTop > 100) {
+                nav.style.background = 'rgba(0, 0, 0, 0.95)';
+            } else {
+                nav.style.background = 'rgba(0, 0, 0, 0.8)';
+            }
+        });
+    </script>
