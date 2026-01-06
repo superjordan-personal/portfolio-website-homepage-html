@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jordan Strauss | My Work</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+
+    <style>
+        /* --- CORE VARIABLES & RESETS --- */
+        :root {
+            --bg-primary: #000000;
+            --bg-secondary: #0d0d0d;
+            --bg-card: #1a1a1a;
+            --text-primary: #f5f5f7;
+            --text-secondary: #86868b;
+            --text-tertiary: #6e6e73;
+            --accent-blue: #0071e3;
+            --accent-light: #06c;
+            --border-subtle: #2d2d2d;
+            --shadow-primary: rgba(0, 0, 0, 0.6);
+            --shadow-card: rgba(0, 0, 0, 0.3);
+            --banner-height: 36px;
+            --cursor-x: 50vw;
+            --cursor-y: 50vh;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Consolas', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.47059;
+            letter-spacing: -0.022em;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+        }
+
+        /* --- LOADING SCREEN --- */
+        #loading-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-primary);
+            z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.8s ease-out, visibility 0.8s;
+        }
+        #loading-screen.hidden { opacity: 0; visibility: hidden; }
+        .loading-text {
+            font-size: 48px; font-weight: 700; color: white; margin-bottom: 20px;
+            letter-spacing: 2px; text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); text-transform: lowercase;
+        }
+        .progress-bar-container {
+            width: 200px; height: 4px; background: var(--border-subtle); border-radius: 4px;
+            overflow: hidden; box-shadow: 0 0 15px rgba(57, 255, 20, 0.2);
+        }
+        .progress-bar {
+            height: 100%; width: 0%; background: #39ff14;
+            box-shadow: 0 0 20px #39ff14, 0 0 10px #39ff14, 0 0 5px #39ff14;
+            animation: progressAnimation 2s linear forwards;
+        }
+        @keyframes progressAnimation { to { width: 100%; } }
+
+        /* --- BACKGROUND ELEMENTS --- */
+        .main-content-wrapper {
+            opacity: 0; transform: translateY(20px);
+            transition: opacity 1s ease-out 0.3s, transform 1s ease-out 0.3s;
+            padding-top: var(--banner-height); position: relative; z-index: 1;
+        }
+        body.loaded .main-content-wrapper { opacity: 1; transform: translateY(0); }
+        
+        #three-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -3; opacity: 0.6; pointer-events: none; }
+        .cursor-glow {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9998; pointer-events: none;
+            background: radial-gradient(600px circle at var(--cursor-x) var(--cursor-y), rgba(0, 113, 227, 0.15), transparent 45%);
+            mix-blend-mode: screen;
+        }
+        .hero-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+            background: radial-gradient(ellipse at center, rgba(0, 113, 227, 0.05) 0%, rgba(0, 113, 227, 0.02) 50%, transparent 100%);
+            z-index: -2; animation: subtleShift 20s ease-in-out infinite;
+        }
+        .static-stars-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; transition: transform 0.1s linear; }
+        .static-star {
+            position: absolute; background: white; border-radius: 50%; opacity: 0;
+            animation: twinkle var(--duration, 3s) ease-in-out infinite; animation-delay: var(--delay, 0s);
+        }
+        @keyframes twinkle { 0%, 100% { opacity: 0.2; transform: scale(0.8); } 50% { opacity: 0.9; transform: scale(1.2); } }
+        
+        /* --- NAVBAR --- */
+        .nav {
+            position: fixed; top: 50px; left: 50%; transform: translateX(-50%);
+            width: auto; min-width: 850px; height: 56px;
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: saturate(180%) blur(40px); -webkit-backdrop-filter: saturate(180%) blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 100px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+            z-index: 2001; padding: 0 30px; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .nav-content { display: flex; align-items: center; justify-content: space-between; height: 100%; width: 100%; }
+        .nav-logo { font-size: 18px; font-weight: 700; color: var(--text-primary); text-decoration: none; transition: opacity 0.3s ease; }
+        .nav-logo:hover { opacity: 0.8; }
+        .nav-links { display: flex; list-style: none; gap: 32px; }
+        .nav-links a {
+            color: rgba(255, 255, 255, 0.8); text-decoration: none; font-size: 14px; font-weight: 500;
+            transition: color 0.3s ease; position: relative;
+        }
+        .nav-links a:hover { color: #ffffff; }
+
+        /* --- GLOWING LINK STYLE --- */
+        .nav-links a.glow-link {
+            color: white;
+            text-shadow: 0 0 8px rgba(0, 113, 227, 0.8), 0 0 16px rgba(0, 113, 227, 0.6);
+            font-weight: 600;
+            animation: textPulse 2s ease-in-out infinite;
+        }
+        @keyframes textPulse {
+            0%, 100% { text-shadow: 0 0 8px rgba(0, 113, 227, 0.8), 0 0 16px rgba(0, 113, 227, 0.4); opacity: 0.9; }
+            50% { text-shadow: 0 0 16px rgba(0, 113, 227, 1), 0 0 32px rgba(0, 113, 227, 0.8); opacity: 1; }
+        }
+
+        /* --- PAGE CONTENT STYLES --- */
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 40px; position: relative; z-index: 10; }
+        
+        .work-section {
+            padding-top: 100px; 
+            padding-bottom: 60px;
+            text-align: left;
+        }
+        
+        .work-section:first-of-type {
+            padding-top: 180px; 
+        }
+
+        .work-header {
+            max-width: 800px;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .work-headline {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(48px, 6vw, 80px);
+            font-weight: 400; line-height: 1.05; letter-spacing: -0.02em;
+            color: var(--text-primary); margin-bottom: 30px;
+            opacity: 0; transform: translateY(30px);
+            animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+        }
+
+        .work-description {
+            font-size: 21px; line-height: 1.6; color: var(--text-secondary);
+            margin-bottom: 30px;
+            opacity: 0; transform: translateY(30px);
+            animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards;
+        }
+
+        /* --- CAROUSEL STYLES --- */
+        .carousel-container {
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            padding: 40px 0;
+            opacity: 0; transform: translateY(40px);
+            animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
+            mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+            -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+        }
+
+        .carousel-track {
+            display: flex;
+            gap: 24px;
+            width: max-content;
+            animation: scrollCarousel 60s linear infinite;
+        }
+
+        .carousel-track.reverse {
+            animation-direction: reverse;
+        }
+
+        .carousel-item {
+            position: relative;
+            height: 400px;
+            width: auto;
+            min-width: 300px; 
+            background-color: #1a1a1a; 
+            display: flex; align-items: center; justify-content: center;
+            color: #555;
+            
+            flex-shrink: 0;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: zoom-in;
+            border: 1px solid var(--border-subtle);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .carousel-item img {
+            height: 100%;
+            width: auto;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.5s ease;
+        }
+
+        .carousel-item:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            border-color: var(--accent-blue);
+        }
+        
+        .carousel-item:hover img {
+            transform: scale(1.05);
+        }
+
+        /* Pause on hover */
+        .carousel-container:hover .carousel-track {
+            animation-play-state: paused;
+        }
+
+        @keyframes scrollCarousel {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* --- LIGHTBOX STYLES --- */
+        .lightbox {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 10000;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; visibility: hidden; pointer-events: none;
+            transition: opacity 0.3s ease, visibility 0.3s;
+            backdrop-filter: blur(10px);
+        }
+        .lightbox.active { opacity: 1; visibility: visible; pointer-events: all; }
+        
+        .lightbox-img {
+            max-width: 90%; max-height: 90vh;
+            border-radius: 8px;
+            box-shadow: 0 0 50px rgba(0, 113, 227, 0.2);
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .lightbox.active .lightbox-img { transform: scale(1); }
+
+        .lightbox-close {
+            position: absolute; top: 30px; right: 40px;
+            color: white; font-size: 40px; cursor: pointer;
+            background: none; border: none; outline: none;
+            transition: color 0.2s ease;
+        }
+        .lightbox-close:hover { color: var(--accent-blue); }
+
+        /* --- FOOTER --- */
+        .footer { text-align: center; padding: 40px 0 60px; color: var(--text-tertiary); font-size: 15px; border-top: 0.5px solid var(--border-subtle); margin-top: 50px; }
+        
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes subtleShift { 0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.3; } 50% { transform: scale(1.1) rotate(0.5deg); opacity: 0.2; } }
+
+        /* Responsive */
+        @media (max-width: 834px) {
+            .nav { min-width: unset; width: 90%; }
+            .nav-links { display: none; }
+            .work-section:first-of-type { padding-top: 140px; }
+            .carousel-item { height: 250px; }
+        }
+    </style>
+</head>
+<body class="loading">
+
+    <div id="loading-screen">
+        <div class="loading-text">js</div> 
+        <div class="progress-bar-container"><div class="progress-bar"></div></div>
+    </div>
+
+    <div class="lightbox" id="lightbox">
+        <button class="lightbox-close">&times;</button>
+        <img src="" alt="Full view" class="lightbox-img" id="lightbox-img">
+    </div>
+
+    <div class="main-content-wrapper">
+        
+        <div id="three-canvas"></div>
+        <div class="cursor-glow"></div>
+        <div class="hero-bg"></div>
+        <div class="static-stars-container" id="staticStars"></div>
+
+        <nav class="nav">
+            <div class="nav-content">
+                <a href="index.html" class="nav-logo">JS</a>
+                <ul class="nav-links">
+                    <li><a href="index.html#about">About</a></li>
+                    <li><a href="index.html#current-role">Current Role</a></li>
+                    <li><a href="my-work.html" class="glow-link">My Work!</a></li>
+                    <li><a href="index.html#experience">Experience</a></li>
+                    <li><a href="index.html#skills">Skills</a></li>
+                    <li><a href="index.html#contact">Contact</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <section class="container work-section">
+            
+            <div class="work-header">
+                
+                <h1 class="work-headline">Current Work: Can we make computers haul dirt?</h1>
+                
+                <p class="work-description">
+                    After 7 months of persistence, turns out - we can! And with a pretty interesting level of feedback. We test a fleet of 40-ton class equipment through both simulation and physical drills that closely mimic that of an operator.
+                </p>
+                <p class="work-description">
+                    Through GNSS, Starlink and GPS for location and movement data, and a mix of radar and sensor fusion, we've been able to produce a kit to replicate an operator at a higher level of efficiency relative to baseline, with a nominal Mean Time to Failure (MTTF). We're still in active deployment, and results are promising.
+                </p>
+            </div>
+
+            <div class="carousel-container">
+                <div class="carousel-track">
+                    <div class="carousel-item"><img src="image5.jpeg" alt="Cab Wiring Setup"></div>
+                    <div class="carousel-item"><img src="image11.jpeg" alt="Engineering Desk Setup"></div>
+                    <div class="carousel-item"><img src="image0.jpeg" alt="Engineers in Cab"></div>
+                    <div class="carousel-item"><img src="image8.jpeg" alt="Dump Truck Rear View"></div>
+                    <div class="carousel-item"><img src="image7.jpeg" alt="Wiring Detail"></div>
+                    <div class="carousel-item"><img src="image9.jpeg" alt="Overhead Cab View"></div>
+                    <div class="carousel-item"><img src="image4.jpeg" alt="Truck at Night"></div>
+                    <div class="carousel-item"><img src="image2.jpeg" alt="Autonomous Fleet"></div>
+                    <div class="carousel-item"><img src="adtrail.jpeg" alt="Engineer on Truck"></div>
+                    <div class="carousel-item"><img src="image1.jpeg" alt="Diagnostic Testing"></div>
+
+                    <div class="carousel-item"><img src="image5.jpeg" alt="Cab Wiring Setup"></div>
+                    <div class="carousel-item"><img src="image11.jpeg" alt="Engineering Desk Setup"></div>
+                    <div class="carousel-item"><img src="image0.jpeg" alt="Engineers in Cab"></div>
+                    <div class="carousel-item"><img src="image8.jpeg" alt="Dump Truck Rear View"></div>
+                    <div class="carousel-item"><img src="image7.jpeg" alt="Wiring Detail"></div>
+                    <div class="carousel-item"><img src="image9.jpeg" alt="Overhead Cab View"></div>
+                    <div class="carousel-item"><img src="image4.jpeg" alt="Truck at Night"></div>
+                    <div class="carousel-item"><img src="image2.jpeg" alt="Autonomous Fleet"></div>
+                    <div class="carousel-item"><img src="adtrail.jpeg" alt="Engineer on Truck"></div>
+                    <div class="carousel-item"><img src="image1.jpeg" alt="Diagnostic Testing"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="container work-section">
+            <div class="work-header">
+                <h1 class="work-headline">Previous Projects: Simulating Vehicle Dynamics with Ford Motorsport</h1>
+                <p class="work-description">
+                    Although my primary focus at Ford was on sensor hardware and telematics, that doesn't stop me from building with what I had. I took this as a challenge, and fabricated a 6DoF (Depth of Field) motion simulator in my living room to test real-world hardware with synthetic data imported from the simulator.
+                </p>
+                <p class="work-description">
+                    This setup was fabricated with extruded aluminum and designed in AutoCAD/Fusion, with custom button boxes and 4 Arduino-controlled actuators. After completion, I'd take vehicle models from the Dynamics team and run them inside of feed-forward simulations using the sensor data as output.
+                </p>
+                <p class="work-description">
+                    This allowed my team to recieve information on how our management software was working in realtime, allowing for faster revision and parameter tuning. I'd say trading the dining table was worth it.
+                </p>
+            </div>
+
+            <div class="carousel-container">
+                <div class="carousel-track reverse">
+                    <div class="carousel-item"><img src="sim1.jpeg" alt="Sim Rig Wide Shot"></div>
+                    <div class="carousel-item"><img src="sim2.jpeg" alt="Triple Screen Setup"></div>
+                    <div class="carousel-item"><img src="sim3.jpeg" alt="Button Box Detail"></div>
+                    <div class="carousel-item"><img src="sim4.jpeg" alt="Actuator Control Box"></div>
+                    <div class="carousel-item"><img src="sim5.jpeg" alt="Steering Wheel Detail"></div>
+                    <div class="carousel-item"><img src="sim6.jpeg" alt="Full Setup Side View"></div>
+                    
+                    <div class="carousel-item"><img src="sim1.jpeg" alt="Sim Rig Wide Shot"></div>
+                    <div class="carousel-item"><img src="sim2.jpeg" alt="Triple Screen Setup"></div>
+                    <div class="carousel-item"><img src="sim3.jpeg" alt="Button Box Detail"></div>
+                    <div class="carousel-item"><img src="sim4.jpeg" alt="Actuator Control Box"></div>
+                    <div class="carousel-item"><img src="sim5.jpeg" alt="Steering Wheel Detail"></div>
+                    <div class="carousel-item"><img src="sim6.jpeg" alt="Full Setup Side View"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="container work-section">
+            <div class="work-header">
+                <h1 class="work-headline">Personal Projects: Boeing Research - Automating In-Flight Control Surfaces via Remote Control</h1>
+                <p class="work-description">
+                    I've spent countless hours in my personal time documenting, studying and writing about flight. During my time in college, I've co-authored and contributed many entries on stabilization, avionics and other systems. I had recieved the opportunity to work with Boeing in college, through connections made through one of the many STEM showcases held at Rice University. In short, I was adding extra batteries to different models of model aircraft to increase flight time.
+                </p>
+                <p class="work-description">
+                    Second, I added a series of small cameras, sensors and servos to both the wing and fuselage to accept remote commands, overriding (to a degree) a user's input from the remote. This allowed me to send a series of automated commands from a ground computer, allowing the aircraft to augement it's flight path, angle of attack (AoA) and heading to increase its range.
+                </p>
+                <p class="work-description">
+                    This small setup was an interest to some indivuals testing autonomous drones at Boeing, netting me a free trip to see some of their engineering and maintenance operations in Virginia. After spending some time with a couple of engineers, I was able to see the same implementations I had made were the exact same configurations that are being used on both the 747 and 737-800's Autopilot systems in my simulator at home.
+                </p>
+            </div>
+
+            <div class="carousel-container">
+                <div class="carousel-track">
+                    <div class="carousel-item"><img src="flight6.jpeg" alt="Flight Sim Screen"></div>
+                    <div class="carousel-item"><img src="flight5.jpeg" alt="Engine Maintenance"></div>
+                    <div class="carousel-item"><img src="flight4.jpeg" alt="Turbine Engine Detail"></div>
+                    <div class="carousel-item"><img src="flight3.jpeg" alt="Engine Lineup"></div>
+                    <div class="carousel-item"><img src="flight7.jpeg" alt="Cockpit View"></div>
+                    <div class="carousel-item"><img src="flight2.jpeg" alt="RC Planes Storage"></div>
+                    <div class="carousel-item"><img src="flight1.jpeg" alt="RC Plane Field"></div>
+                    
+                    <div class="carousel-item"><img src="flight6.jpeg" alt="Flight Sim Screen"></div>
+                    <div class="carousel-item"><img src="flight5.jpeg" alt="Engine Maintenance"></div>
+                    <div class="carousel-item"><img src="flight4.jpeg" alt="Turbine Engine Detail"></div>
+                    <div class="carousel-item"><img src="flight3.jpeg" alt="Engine Lineup"></div>
+                    <div class="carousel-item"><img src="flight7.jpeg" alt="Cockpit View"></div>
+                    <div class="carousel-item"><img src="flight2.jpeg" alt="RC Planes Storage"></div>
+                    <div class="carousel-item"><img src="flight1.jpeg" alt="RC Plane Field"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="container work-section">
+            <div class="work-header">
+                <h1 class="work-headline">Personal Project: Putting What I've Learned In CAD to the Test</h1>
+                <p class="work-description">
+                    Not sure about you, but most people wouldn't literally put their only mode of transportation on the line. Not for some thing ridiculous at least. Of course, I'm a little stubborn. As you grow in your career, it's easy to become stale. You've learned a lot - so the opportunity doesn't usually present itself to strengthen yourself unless you try. And, try I did.
+                </p>
+                <p class="work-description">
+                    I wanted to make sure I could completely understand what I had learned in AutoCAD and Fusion360, and the best way I could think of testing myself was to put myself out of a vehicle for a month. I completely tore apart the rear-end of my truck, replacing my suspension components with CAD-designed replicas that had been tested and deployed in Fusion360. After designing and testing them, I loaded up my welder and begun fabricating.
+                </p>
+                <p class="work-description">
+                    This required me to weld in a cage for the bed, alongside new brackets, mounts and hardware. I also modelled stressors, component and material strength for good measure. After testing offroad, I've been able to verify minimal frame stress and extra suspension travel. In completion, I netted an extra 110 hours of Autodesk and fabrication training - and winner of the "Coolest Guy in the Chick-Fil-A Drive Thru" award.
+                </p>
+            </div>
+
+            <div class="carousel-container">
+                <div class="carousel-track reverse">
+                    <div class="carousel-item"><img src="truck1.jpeg" alt="Truck Jump"></div>
+                    <div class="carousel-item"><img src="truck2.jpeg" alt="Cage Fabrication"></div>
+                    <div class="carousel-item"><img src="truck4.jpeg" alt="Suspension Detail"></div>
+                    <div class="carousel-item"><img src="truck5.jpeg" alt="King Shocks Box"></div>
+                    <div class="carousel-item"><img src="truck6.jpeg" alt="Fender Cut"></div>
+                    
+                    <div class="carousel-item"><img src="truck1.jpeg" alt="Truck Jump"></div>
+                    <div class="carousel-item"><img src="truck2.jpeg" alt="Cage Fabrication"></div>
+                    <div class="carousel-item"><img src="truck4.jpeg" alt="Suspension Detail"></div>
+                    <div class="carousel-item"><img src="truck5.jpeg" alt="King Shocks Box"></div>
+                    <div class="carousel-item"><img src="truck6.jpeg" alt="Fender Cut"></div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="container">
+                <p>Written by Jordan with 🤍</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // --- LOADING LOGIC ---
+        document.addEventListener("DOMContentLoaded", () => {
+            const loader = document.getElementById('loading-screen');
+            setTimeout(() => {
+                loader.classList.add('hidden');
+                document.body.classList.remove('loading');
+                document.body.classList.add('loaded');
+                setTimeout(() => { loader.style.display = 'none'; }, 800);
+            }, 2000); 
+        });
+
+        // --- BACKGROUND EFFECTS ---
+        // 1. Static Stars
+        const starsContainer = document.getElementById('staticStars');
+        for (let i = 0; i < 150; i++) {
+            const star = document.createElement('div');
+            star.classList.add('static-star');
+            const x = Math.random() * 100;
+            const y = Math.random() * 100;
+            const size = Math.random() < 0.8 ? Math.random() * 2 + 1 : Math.random() * 3 + 2;
+            star.style.left = `${x}%`; star.style.top = `${y}%`;
+            star.style.width = `${size}px`; star.style.height = `${size}px`;
+            star.style.setProperty('--duration', `${Math.random() * 3 + 2}s`);
+            star.style.setProperty('--delay', `${Math.random() * 5}s`);
+            starsContainer.appendChild(star);
+        }
+
+        // 2. Three.js Particles
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('three-canvas').appendChild(renderer.domElement);
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 1500;
+        const posArray = new Float32Array(particlesCount * 3);
+        for(let i = 0; i < particlesCount * 3; i++) { posArray[i] = (Math.random() - 0.5) * 15; }
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const material = new THREE.PointsMaterial({ size: 0.02, color: 0x0071e3, transparent: true, opacity: 0.8 });
+        const particlesMesh = new THREE.Points(particlesGeometry, material);
+        scene.add(particlesMesh);
+        camera.position.z = 3;
+
+        // 3. Mouse Interaction
+        let mouseX = 0; let mouseY = 0;
+        document.addEventListener('mousemove', (event) => {
+            mouseX = event.clientX; mouseY = event.clientY;
+            document.documentElement.style.setProperty('--cursor-x', `${mouseX}px`);
+            document.documentElement.style.setProperty('--cursor-y', `${mouseY}px`);
+            const moveX = (window.innerWidth / 2 - mouseX) * 0.02;
+            const moveY = (window.innerHeight / 2 - mouseY) * 0.02;
+            starsContainer.style.transform = `translate(${moveX}px, ${moveY}px)`;
+        });
+
+        // 4. Animation Loop
+        const clock = new THREE.Clock();
+        const animate = () => {
+            const elapsedTime = clock.getElapsedTime();
+            particlesMesh.rotation.y = elapsedTime * 0.05;
+            particlesMesh.rotation.x = -mouseY * 0.0001;
+            particlesMesh.rotation.y += mouseX * 0.0001;
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        };
+        animate();
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- LIGHTBOX LOGIC ---
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const lightboxClose = document.querySelector('.lightbox-close');
+        const carouselImages = document.querySelectorAll('.carousel-item img');
+
+        carouselImages.forEach(img => {
+            img.addEventListener('click', () => {
+                lightboxImg.src = img.src;
+                lightbox.classList.add('active');
+            });
+        });
+
+        lightboxClose.addEventListener('click', () => {
+            lightbox.classList.remove('active');
+        });
+
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) {
+                lightbox.classList.remove('active');
+            }
+        });
+
+        // Navbar Scroll Effect
+        const nav = document.querySelector('.nav');
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 50) {
+                 nav.style.background = 'rgba(0, 0, 0, 0.5)'; 
+            } else {
+                 nav.style.background = 'rgba(20, 20, 20, 0.6)'; 
+            }
+        });
+    </script>
+</body>
+</html>
